@@ -1,17 +1,24 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"text/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
+
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
 func main() {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /post/{slug}", SlugHandler(FileReader{}))
+	postTemplate := template.Must(template.ParseFiles("post.gohtml"))
+
+	mux.HandleFunc("GET /post/{slug}", SlugHandler(FileReader{}, postTemplate))
 
 	err := http.ListenAndServe(":3030", mux)
 	if err != nil {
@@ -24,6 +31,12 @@ type SlugReader interface {
 }
 
 type FileReader struct{}
+
+type PostData struct {
+	Author  string
+	Content string
+	Title   string
+}
 
 func (fr FileReader) Read(slug string) (string, error) {
 	f, err := os.Open("posts/" + slug + ".md")
@@ -41,7 +54,18 @@ func (fr FileReader) Read(slug string) (string, error) {
 	return string(b), nil
 }
 
-func SlugHandler(slugReader SlugReader) http.HandlerFunc {
+func SlugHandler(slugReader SlugReader, postTemplate *template.Template) http.HandlerFunc {
+	mdRenderer := goldmark.New(
+		goldmark.WithExtensions(
+			highlighting.NewHighlighting(
+				highlighting.WithStyle("monokai"),
+				highlighting.WithFormatOptions(
+					chromahtml.WithLineNumbers(true),
+				),
+			),
+		),
+	)
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		content, err := slugReader.Read(r.PathValue("slug"))
 		if err != nil {
@@ -49,6 +73,16 @@ func SlugHandler(slugReader SlugReader) http.HandlerFunc {
 			return
 		}
 
-		fmt.Fprint(w, content)
+		var buf bytes.Buffer
+		err = mdRenderer.Convert([]byte(content), &buf)
+		if err != nil {
+			panic(err)
+		}
+
+		postTemplate.Execute(w, PostData{
+			Content: buf.String(),
+			Title: "test",
+			Author: "test",
+		})
 	}
 }

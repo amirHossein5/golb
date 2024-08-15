@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="bg-gray-800 h-16 flex items-center justify-center gap-4">
+        <a href="" class="text-gray-300 hover:bg-gray-700">home</a>
+        <a href="" class="text-gray-300 hover:bg-gray-700">about</a>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-8 mt-8">
+        <h1 class="text-3xl font-bold">{{ .Title }}</h1>
+        <p class="text-gray-500">{{ .Author }}</p>
+        <div class="prose mt-8">{{ .Content }}</div>
+    </div>
+</body>
+</html>
