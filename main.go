@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
-	"text/template"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/adrg/frontmatter"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -33,9 +35,15 @@ type SlugReader interface {
 type FileReader struct{}
 
 type PostData struct {
-	Author  string
-	Content string
-	Title   string
+	Content template.HTML
+	Title   string `toml:"title"`
+	Author  Author `toml:"author"`
+}
+
+type Author struct {
+	Name  string `toml:"name"`
+	Email string `toml:"email"`
+
 }
 
 func (fr FileReader) Read(slug string) (string, error) {
@@ -73,16 +81,21 @@ func SlugHandler(slugReader SlugReader, postTemplate *template.Template) http.Ha
 			return
 		}
 
+		var post PostData
+		rest, err := frontmatter.Parse(strings.NewReader(content), &post)
+		if err != nil {
+			http.Error(w, "Post not found", http.StatusNotFound)
+			return
+		}
+
 		var buf bytes.Buffer
-		err = mdRenderer.Convert([]byte(content), &buf)
+		err = mdRenderer.Convert([]byte(rest), &buf)
 		if err != nil {
 			panic(err)
 		}
 
-		postTemplate.Execute(w, PostData{
-			Content: buf.String(),
-			Title: "test",
-			Author: "test",
-		})
+		post.Content = template.HTML(buf.String())
+
+		postTemplate.Execute(w, post)
 	}
 }

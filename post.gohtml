@@ -15,7 +15,9 @@
 
     <div class="max-w-7xl mx-auto px-8 mt-8">
         <h1 class="text-3xl font-bold">{{ .Title }}</h1>
-        <p class="text-gray-500">{{ .Author }}</p>
+        {{with .Author}}
+            By: <a href="mailto:{{.Email}}" class="text-gray-500">{{ .Name }}</a>
+        {{end}}
         <div class="prose mt-8">{{ .Content }}</div>
     </div>
 </body>
